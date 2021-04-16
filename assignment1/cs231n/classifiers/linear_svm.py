@@ -43,7 +43,7 @@ def svm_loss_naive(W, X, y, reg):
     loss /= num_train
 
     # Add regularization to the loss.
-    loss += reg * np.sum(W * W)
+    loss += 0.5 * reg * np.sum(W * W)
 
     #############################################################################
     # TODO:                                                                     #
@@ -56,7 +56,7 @@ def svm_loss_naive(W, X, y, reg):
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     dW /= num_train
-    dW += 2 * reg * np.sum(W)
+    dW += reg * W
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
     return loss, dW
@@ -79,9 +79,11 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+
     scores = np.dot(X, W)
-    margin = np.maximum(0, scores - np.expand_dims(scores[np.arange(X.shape[0]), y], axis=1) + 1)
-    loss = np.sum(margin) / X.shape[0] - 1 + reg * np.sum(W*W)# "- 1" to compensate for the max(score[y[i]], 0)
+    margins = np.maximum(0, scores - scores[range(X.shape[0]), y].reshape(-1, 1) + 1)
+    margins[range(X.shape[0]), y] = 0
+    loss = np.sum(margins) / X.shape[0] + 0.5 * reg * np.sum(W * W)# "- 1" as "- delta" to compensate for the max(score[y[i]], 0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -96,13 +98,12 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-#     if margin[i][j] > 0:
-#         dW[:, j] += X[i].T
-#         dW[:, y[i]] -= X[i].T
-    margin[margin > 0] = 1
-    compensation = np.sum(margin, axis=1)
-    margin[np.arange(X.shape[0]), y] -= compensation
-    dW = X.T.dot(margin) / X.shape[0] - 2 * reg * W
+
+    margins[margins > 0] = 1
+    margins[range(X.shape[0]), y] = 0
+    margins[range(X.shape[0]), y] -= np.sum(margins, axis=1)
+    dW = X.T.dot(margins) / X.shape[0] + reg * W
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
